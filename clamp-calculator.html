@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clamp Calculator</title>
+    <meta name="description" content="Advanced CSS clamp() calculator with full SCSS mixin support and previewer.">
+    <style>
+        :root {
+            --bg-color: #0f0f13;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-muted: #8b8b93;
+            --accent-main: linear-gradient(135deg, #FF6B6B, #4ECDC4);
+            --accent-mobile: #FF6B6B;
+            --accent-desktop: #4ECDC4;
+            --input-bg: rgba(0, 0, 0, 0.3);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --success: #2aa57f;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+        }
+
+        /* Ambient Background */
+        .background-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 100vh;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(78, 205, 196, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(255, 107, 107, 0.1) 0%, transparent 40%);
+            filter: blur(80px);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, #fff, #8b8b93);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        /* Settings Bar */
+        .settings-bar {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--card-border);
+            border-radius: 50px;
+            padding: 0.5rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .settings-input {
+            width: 60px;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--text-muted);
+            color: #fff;
+            text-align: center;
+            font-size: 1rem;
+            padding: 2px;
+        }
+
+        .settings-unit {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* Container Grid */
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2rem;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: visible;
+            /* Changed for preview handle */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            border-radius: 24px 24px 0 0;
+            /* Match card radius */
+        }
+
+        .card.mobile::before {
+            background: var(--accent-mobile);
+        }
+
+        .card.desktop::before {
+            background: var(--accent-desktop);
+        }
+
+        .card.reverse::before {
+            background: #ffd700;
+        }
+
+        .card.converter::before {
+            background: #a29bfe;
+        }
+
+        .card.docs::before {
+            background: #fff;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .card-badge {
+            font-size: 0.75rem;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        /* Auto Scale Toggle */
+        .auto-scale-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 8px;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+        }
+
+        .auto-scale-toggle input {
+            width: auto;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .auto-scale-toggle label {
+            margin: 0;
+            font-size: 0.75rem;
+            cursor: pointer;
+            color: var(--text-main);
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        /* Inputs */
+        .input-group {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .input-row.three-col {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 8px;
+            padding: 0.8rem;
+            color: white;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            outline: none;
+            box-sizing: border-box;
+            transition: 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        /* Mixin Options Section */
+        .mixin-options {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px dashed var(--card-border);
+        }
+
+        .mixin-options-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mixin-options-title::after {
+            content: '▼';
+            font-size: 0.6em;
+            transition: transform 0.2s;
+        }
+
+        .mixin-options.collapsed .mixin-options-content {
+            display: none;
+        }
+
+        .mixin-options.collapsed .mixin-options-title::after {
+            transform: rotate(-90deg);
+        }
+
+
+        /* Result Area */
+        .result-group {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .result-box {
+            background: #000;
+            border-radius: 12px;
+            padding: 1rem;
+            position: relative;
+            border: 1px solid var(--card-border);
+        }
+
+        .result-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            display: block;
+        }
+
+        .result-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-desktop);
+            word-break: break-all;
+            line-height: 1.4;
+        }
+
+        .result-box.secondary .result-value {
+            color: #a29bfe;
+        }
+
+        /* Buttons */
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Previewer */
+        .preview-area {
+            margin-top: 1.5rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--card-border);
+            position: relative;
+        }
+
+        .preview-container {
+            width: 100%;
+            height: 120px;
+            background: #fff;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            resize: horizontal;
+            min-width: 200px;
+            max-width: 100%;
+            border: 2px dashed #666;
+            margin: 0 auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-text {
+            color: #333;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+            transition: font-size 0.05s, font-weight 0.2s, letter-spacing 0.2s, line-height 0.2s;
+            /* Faster font-size transition */
+            width: 90%;
+            text-align: center;
+        }
+
+        .preview-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: block;
+            text-align: center;
+        }
+
+        /* Resize Handle Visual */
+        .preview-container::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(135deg, transparent 50%, #666 50%);
+            cursor: se-resize;
+            pointer-events: none;
+            /* Let the resize work through it */
+        }
+
+        .preview-width-dps {
+            position: absolute;
+            top: -25px;
+            right: 0;
+            background: var(--accent-desktop);
+            color: #000;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        /* Documentation */
+        .docs-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #ccc;
+        }
+
+        .docs-list li {
+            margin-bottom: 0.8rem;
+            padding-left: 1.2rem;
+            position: relative;
+        }
+
+        .docs-list li::before {
+            content: '•';
+            color: var(--accent-desktop);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+        }
+
+        /* Tooltip */
+        .copy-tooltip {
+            position: absolute;
+            top: -25px;
+            right: 0;
+            background: var(--success);
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            opacity: 0;
+            transform: translateY(5px);
+            transition: all 0.2s;
+            pointer-events: none;
+        }
+
+        .copy-tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="background-glow"></div>
+
+    <h1>Clamp Calculator <span style="font-size: 0.5em; opacity: 0.5; font-weight: 300;">v3.1</span></h1>
+
+    <!-- Global Settings -->
+    <div class="settings-bar">
+        <span class="settings-label">Base Font Size:</span>
+        <input type="number" id="baseFontSize" class="settings-input" value="16" onchange="updateAll()">
+        <span class="settings-unit">px</span>
+    </div>
+
+    <div class="container">
+
+        <!-- Mobile Card -->
+        <div class="card mobile">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Mobile</div>
+                    <div class="card-subtitle">Scalable Typography</div>
+                </div>
+                <!-- Auto Scale Toggle -->
+                <div class="auto-scale-toggle">
+                    <input type="checkbox" id="mobileAuto" checked>
+                    <label for="mobileAuto">Auto-Scale</label>
+                </div>
+                <span class="card-badge">375px → 768px</span>
+            </div>
+
+            <div class="input-row">
+                <div class="input-wrapper">
+                    <label>Min (375px)</label>
+                    <input type="number" id="mobileMin" placeholder="16" oninput="handleMobileInput('min')">
+                </div>
+                <div class="input-wrapper">
+                    <label>Max (768px)</label>
+                    <input type="number" id="mobileMax" placeholder="24" oninput="handleMobileInput('max')">
+                </div>
+            </div>
+
+            <!-- Mixin Options Mobile -->
+            <div class="mixin-options" id="mobileOptions">
+                <div class="mixin-options-title" onclick="toggleOptions('mobileOptions')">Mixin Options (Weight, Color,
+                    etc.)</div>
+                <div class="mixin-options-content">
+                    <div class="input-row three-col">
+                        <div class="input-wrapper">
+                            <label>Weight</label>
+                            <input type="text" id="mobileWeight" placeholder="400" oninput="updateAll()">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Color</label>
+                            <input type="text" id="mobileColor" placeholder="#000" oninput="updateAll()">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Align</label>
+                            <select id="mobileAlign" onchange="updateAll()" style="color: #fff;">
+                                <option value="">(Default)</option>
+                                <option value="left">Left</option>
+                                <option value="center">Center</option>
+                                <option value="right">Right</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-row" style="margin-top: 1rem;">
+                        <div class="input-wrapper">
+                            <label>Line Height</label>
+                            <input type="text" id="mobileLh" placeholder="1.5" oninput="updateAll()">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Letter Spacing</label>
+                            <input type="text" id="mobileLs" placeholder="0.05em" oninput="updateAll()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-group">
+                <div class="result-box">
+                    <span class="result-label">CSS Clamp</span>
+                    <div class="result-value" id="mobileResult">...</div>
+                    <button class="copy-btn" onclick="copyToClipboard('mobileResult', this)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span class="copy-tooltip">Copied!</span>
+                    </button>
+                </div>
+                <div class="result-box secondary">
+                    <span class="result-label">SCSS Mixin</span>
+                    <div class="result-value" id="mobileMixin">...</div>
+                    <button class="copy-btn" onclick="copyToClipboard('mobileMixin', this)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span class="copy-tooltip">Copied!</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desktop Card -->
+        <div class="card desktop">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Desktop</div>
+                    <div class="card-subtitle">Scalable Typography</div>
+                </div>
+                <!-- Auto Scale Toggle -->
+                <div class="auto-scale-toggle">
+                    <input type="checkbox" id="desktopAuto" checked>
+                    <label for="desktopAuto">Auto-Scale</label>
+                </div>
+                <span class="card-badge">768px → 1440px</span>
+            </div>
+
+            <div class="input-row">
+                <div class="input-wrapper">
+                    <label>Min (768px)</label>
+                    <input type="number" id="desktopMin" placeholder="24" oninput="handleDesktopInput('min')">
+                </div>
+                <div class="input-wrapper">
+                    <label>Max (1440px)</label>
+                    <input type="number" id="desktopMax" placeholder="48" oninput="handleDesktopInput('max')">
+                </div>
+            </div>
+
+            <!-- Mixin Options Desktop -->
+            <div class="mixin-options" id="desktopOptions">
+                <div class="mixin-options-title" onclick="toggleOptions('desktopOptions')">Mixin Options (Weight, Color,
+                    etc.)</div>
+                <div class="mixin-options-content">
+                    <div class="input-row three-col">
+                        <div class="input-wrapper">
+                            <label>Weight</label>
+                            <input type="text" id="desktopWeight" placeholder="400" oninput="updateAll()">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Color</label>
+                            <input type="text" id="desktopColor" placeholder="#000" oninput="updateAll()">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Align</label>
+                            <select id="desktopAlign" onchange="updateAll()" style="color: #fff;">
+                                <option value="">(Default)</option>
+                                <option value="left">Left</option>
+                                <option value="center">Center</option>
+                                <option value="right">Right</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-row" style="margin-top: 1rem;">
+                        <div class="input-wrapper">
+                            <label>Line Height</label>
+                            <input type="text" id="desktopLh" placeholder="1.5" oninput="updateAll()">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Letter Spacing</label>
+                            <input type="text" id="desktopLs" placeholder="0.05em" oninput="updateAll()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-group">
+                <div class="result-box">
+                    <span class="result-label">CSS Clamp</span>
+                    <div class="result-value" id="desktopResult">...</div>
+                    <button class="copy-btn" onclick="copyToClipboard('desktopResult', this)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span class="copy-tooltip">Copied!</span>
+                    </button>
+                </div>
+                <div class="result-box secondary">
+                    <span class="result-label">SCSS Mixin</span>
+                    <div class="result-value" id="desktopMixin">...</div>
+                    <button class="copy-btn" onclick="copyToClipboard('desktopMixin', this)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span class="copy-tooltip">Copied!</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Previewer -->
+            <div class="preview-area">
+                <span class="preview-label">↓ Drag the corner to resize preview ↓</span>
+                <div class="preview-width-dps" id="previewWidth">Width: - px</div>
+                <div class="preview-container" id="previewContainer">
+                    <div class="preview-text" id="previewText">Preview Text</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VW Converter -->
+        <div class="card converter">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">VW Converter</div>
+                    <div class="card-subtitle">Pixel to Viewport Width</div>
+                </div>
+                <span class="card-badge">toVw / toVw2</span>
+            </div>
+
+            <div class="input-row">
+                <div class="input-wrapper">
+                    <label>Target (px)</label>
+                    <input type="number" id="vwPx" placeholder="50" oninput="updateAll()">
+                </div>
+                <div class="input-wrapper">
+                    <label>Width ($design-width)</label>
+                    <input type="number" id="vwWidth" value="1440" oninput="updateAll()">
+                </div>
+            </div>
+
+            <div class="result-group">
+                <div class="result-box">
+                    <span class="result-label">Result</span>
+                    <div class="result-value" id="vwResult">...</div>
+                    <button class="copy-btn" onclick="copyToClipboard('vwResult', this)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span class="copy-tooltip">Copied!</span>
+                    </button>
+                </div>
+                <div class="result-box secondary">
+                    <span class="result-label">SCSS Function Call</span>
+                    <div class="result-value" id="scssResult">...</div>
+                    <button class="copy-btn" onclick="copyToClipboard('scssResult', this)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span class="copy-tooltip">Copied!</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reverse Calculator -->
+        <div class="card reverse">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Reverse Tool</div>
+                    <div class="card-subtitle">Analyze Clamp String</div>
+                </div>
+                <span class="card-badge">Parse</span>
+            </div>
+
+            <div class="input-wrapper">
+                <label>Paste clamp() code here</label>
+                <input type="text" id="reverseInput" placeholder="clamp(1rem, 2.5vw + 0.5rem, 3rem)"
+                    oninput="calculateReverse()">
+            </div>
+
+            <div class="result-group" style="margin-top: 1.5rem;">
+                <div class="result-box">
+                    <span class="result-label">Analysis</span>
+                    <div class="result-value" id="reverseResult" style="white-space: pre-wrap; font-size: 0.85rem;">
+                        Waiting for input...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documentation -->
+        <div class="card docs">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">使い方 (How to Use)</div>
+                    <div class="card-subtitle">開発者向けガイド</div>
+                </div>
+            </div>
+            <ul class="docs-list">
+                <li><strong>Base Font Size (基本フォント設定)</strong>: プロジェクトのルートフォントサイズ（デフォルトは16px）。</li>
+                <li><strong>Mobile / Desktop Auto-Scale</strong>: "Auto-Scale" をチェックすると、片方の入力値に合わせて比率計算（Mobile: x2.048,
+                    Desktop: x1.875）で自動補完します。</li>
+                <li><strong>Mixin Options (オプション)</strong>: "Mixin Options" をクリックして展開すると、Font Weight, Color, Line Height
+                    などを入力できます。入力した値はプレビューとミックスイン出力に反映されます。</li>
+                <li><strong>Desktop Card &amp; Previewer</strong>: デスクトップ用の `clamp()`
+                    を計算し、プレビューします。右下のハンドルをドラッグしてボックス幅を変えると、文字サイズや行間が連動して変化します。</li>
+                <li><strong>Output (出力)</strong>: `clamp()` 単体と、`_mixin.scss` の `@include txt()`
+                    形式の両方が出力されます。必要な方をコピーしてください。</li>
+                <li><strong>VW Converter / Reverse Tool</strong>: ピクセル変換や既存コードの解析に使用します。</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <script>
+        // Global State
+        let baseFontSize = 16;
+        const RATIO_MOBILE = 768 / 375; // ~2.048
+        const RATIO_DESKTOP = 1440 / 768; // ~1.875
+
+        function toggleOptions(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('collapsed');
+        }
+
+        // Handle Auto-Scaling Logic
+        function handleMobileInput(source) {
+            const isAuto = document.getElementById('mobileAuto').checked;
+            const minEl = document.getElementById('mobileMin');
+            const maxEl = document.getElementById('mobileMax');
+
+            if (isAuto) {
+                if (source === 'min') {
+                    const minVal = parseFloat(minEl.value);
+                    if (!isNaN(minVal)) {
+                        maxEl.value = (minVal * RATIO_MOBILE).toFixed(1);
+                    }
+                } else {
+                    const maxVal = parseFloat(maxEl.value);
+                    if (!isNaN(maxVal)) {
+                        minEl.value = (maxVal / RATIO_MOBILE).toFixed(1);
+                    }
+                }
+            }
+            updateAll();
+        }
+
+        function handleDesktopInput(source) {
+            const isAuto = document.getElementById('desktopAuto').checked;
+            const minEl = document.getElementById('desktopMin');
+            const maxEl = document.getElementById('desktopMax');
+
+            if (isAuto) {
+                if (source === 'min') {
+                    const minVal = parseFloat(minEl.value);
+                    if (!isNaN(minVal)) {
+                        maxEl.value = (minVal * RATIO_DESKTOP).toFixed(1);
+                    }
+                } else {
+                    const maxVal = parseFloat(maxEl.value);
+                    if (!isNaN(maxVal)) {
+                        minEl.value = (maxVal / RATIO_DESKTOP).toFixed(1);
+                    }
+                }
+            }
+            updateAll();
+        }
+
+        function updateAll() {
+            baseFontSize = parseFloat(document.getElementById('baseFontSize').value) || 16;
+
+            calculateMobile();
+            calculateDesktop();
+            calculateVw();
+        }
+
+        // Helper to generate mixin string
+        function generateMixinString(clampVal, prefix) {
+            // Get optional inputs
+            const weight = document.getElementById(prefix + 'Weight').value;
+            const color = document.getElementById(prefix + 'Color').value;
+            const align = document.getElementById(prefix + 'Align').value;
+            const lh = document.getElementById(prefix + 'Lh').value;
+            const ls = document.getElementById(prefix + 'Ls').value;
+
+            // default args: $font-size: 16px, $font-weight: 400, $color: #000, $text-align: left
+
+            let args = [clampVal];
+
+            // Only add subsequent args if they are provided
+            if (weight || color || align) {
+                args.push(weight || '400'); // if color is set but weight isn't, need to fill weight
+            }
+            if (color || align) {
+                args.push(color || '#000');
+            }
+            if (align) {
+                args.push(align);
+            }
+
+            let mixinStr = `@include txt(${args.join(', ')});`;
+
+            // txt-option($line-height: 1, $letter-spacing: 0)
+            if (lh || ls) {
+                let optArgs = [];
+                optArgs.push(lh || '1');
+                if (ls) {
+                    optArgs.push(ls);
+                }
+                mixinStr += `\n@include txt-option(${optArgs.join(', ')});`;
+            }
+
+            return { mixinStr, styles: { weight, color, align, lh, ls } };
+        }
+
+        function calculateClamp(minSize, maxSize, minWidth, maxWidth) {
+            const slope = (maxSize - minSize) / (maxWidth - minWidth);
+            const yAxisIntersection = -minWidth * slope + minSize;
+
+            const interceptRem = (yAxisIntersection / baseFontSize).toFixed(4);
+            const slopeVw = (slope * 100).toFixed(4);
+            const minRem = (minSize / baseFontSize).toFixed(4);
+            const maxRem = (maxSize / baseFontSize).toFixed(4);
+
+            return `clamp(${minRem}rem, ${slopeVw}vw + ${interceptRem}rem, ${maxRem}rem)`;
+        }
+
+        function calculateMobile() {
+            const min = parseFloat(document.getElementById('mobileMin').value);
+            const max = parseFloat(document.getElementById('mobileMax').value);
+            const resultEl = document.getElementById('mobileResult');
+            const mixinEl = document.getElementById('mobileMixin');
+
+            if (isNaN(min) || isNaN(max)) {
+                resultEl.textContent = '...';
+                mixinEl.textContent = '...';
+                return;
+            }
+
+            const val = calculateClamp(min, max, 375, 768);
+            resultEl.textContent = val;
+
+            const mixinData = generateMixinString(val, 'mobile');
+            mixinEl.textContent = mixinData.mixinStr;
+        }
+
+        function calculateDesktop() {
+            const min = parseFloat(document.getElementById('desktopMin').value);
+            const max = parseFloat(document.getElementById('desktopMax').value);
+            const resultEl = document.getElementById('desktopResult');
+            const mixinEl = document.getElementById('desktopMixin');
+            const previewText = document.getElementById('previewText');
+
+            if (isNaN(min) || isNaN(max)) {
+                resultEl.textContent = '...';
+                mixinEl.textContent = '...';
+                return;
+            }
+
+            const val = calculateClamp(min, max, 768, 1440);
+            resultEl.textContent = val;
+
+            const mixinData = generateMixinString(val, 'desktop');
+            mixinEl.textContent = mixinData.mixinStr;
+
+            // Apply styles to preview
+            previewText.style.fontSize = val;
+            if (mixinData.styles.weight) previewText.style.fontWeight = mixinData.styles.weight;
+            if (mixinData.styles.color) previewText.style.color = mixinData.styles.color;
+            if (mixinData.styles.lh) previewText.style.lineHeight = mixinData.styles.lh;
+            if (mixinData.styles.ls) previewText.style.letterSpacing = mixinData.styles.ls;
+        }
+
+        function calculateVw() {
+            const px = parseFloat(document.getElementById('vwPx').value);
+            const width = parseFloat(document.getElementById('vwWidth').value);
+            const resultEl = document.getElementById('vwResult');
+            const scssResultEl = document.getElementById('scssResult');
+
+            if (isNaN(px) || isNaN(width) || width === 0) {
+                resultEl.textContent = '...';
+                scssResultEl.textContent = '...';
+                return;
+            }
+
+            const vwVal = ((px / width) * 100).toFixed(4);
+            resultEl.textContent = `${vwVal}vw`;
+
+            let scssStr = '';
+            if (width === 1440) {
+                scssStr = `toVw(${px})`;
+            } else if (width === 375) {
+                width
+                scssStr = `toVw2(${px})`;
+            } else {
+                scssStr = `toVw(${px}, ${width})`;
+            }
+            scssResultEl.textContent = scssStr;
+        }
+
+        function calculateReverse() {
+            const input = document.getElementById('reverseInput').value;
+            const resultEl = document.getElementById('reverseResult');
+
+            const regex = /clamp\(\s*([\d.]+)rem,\s*([\d.]+)vw\s*\+\s*([\d.]+)rem,\s*([\d.]+)rem\s*\)/i;
+            const match = input.match(regex);
+
+            if (!match) {
+                resultEl.textContent = "Invalid format. Expected: clamp(minRem, vw + interceptRem, maxRem)";
+                resultEl.style.color = "#ff6b6b";
+                return;
+            }
+
+            const minRem = parseFloat(match[1]);
+            const slopeVw = parseFloat(match[2]);
+            const interceptRem = parseFloat(match[3]);
+            const maxRem = parseFloat(match[4]);
+
+            const slope = slopeVw / 100;
+            const intercept = interceptRem * baseFontSize;
+
+            const minPx = (minRem * baseFontSize).toFixed(1);
+            const maxPx = (maxRem * baseFontSize).toFixed(1);
+
+            const minWidthInfo = ((minRem * baseFontSize - intercept) / slope).toFixed(0);
+            const maxWidthInfo = ((maxRem * baseFontSize - intercept) / slope).toFixed(0);
+
+            resultEl.style.color = "#a29bfe";
+            resultEl.textContent = `Min Size: ${minPx}px (at ~${minWidthInfo}px width)\n` +
+                `Max Size: ${maxPx}px (at ~${maxWidthInfo}px width)\n` +
+                `Slope: ${slopeVw}vw`;
+        }
+
+        function copyToClipboard(elementId, btnElement) {
+            const textToCopy = document.getElementById(elementId).textContent;
+            if (textToCopy === '...') return;
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const tooltip = btnElement.querySelector('.copy-tooltip');
+                tooltip.classList.add('show');
+                setTimeout(() => {
+                    tooltip.classList.remove('show');
+                }, 1500);
+            });
+        }
+
+        // Preview Resizer Observer
+        const previewContainer = document.getElementById('previewContainer');
+        const previewWidthDisplay = document.getElementById('previewWidth');
+
+        new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const width = Math.round(entry.contentRect.width);
+                previewWidthDisplay.textContent = `Width: ${width}px`;
+            }
+        }).observe(previewContainer);
+
+        // Initialize
+        updateAll();
+
+    </script>
+</body>
+
+</html>
